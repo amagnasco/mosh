@@ -30,6 +30,9 @@
     also delete it here.
 */
 
+#ifndef TRANSPORT_SENDER_IMPL_HPP
+#define TRANSPORT_SENDER_IMPL_HPP
+
 #include <algorithm>
 #include <list>
 #include <stdio.h>
@@ -229,7 +232,7 @@ void TransportSender<MyState>::add_sent_state( uint64_t the_timestamp, uint64_t 
 }
 
 template <class MyState>
-void TransportSender<MyState>::send_to_receiver( string diff )
+void TransportSender<MyState>::send_to_receiver( const string & diff )
 {
   uint64_t new_num;
   if ( current_state == sent_states.back().state ) { /* previously sent */
@@ -310,7 +313,7 @@ const string TransportSender<MyState>::make_chaff( void )
 }
 
 template <class MyState>
-void TransportSender<MyState>::send_in_fragments( string diff, uint64_t new_num )
+void TransportSender<MyState>::send_in_fragments( const string & diff, uint64_t new_num )
 {
   Instruction inst;
 
@@ -405,3 +408,5 @@ void TransportSender<MyState>::attempt_prospective_resend_optimization( string &
     proposed_diff = resend_diff;
   }
 }
+
+#endif

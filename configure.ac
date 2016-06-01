@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.61])
-AC_INIT([mosh], [1.2.5], [mosh-devel@mit.edu])
+AC_INIT([mosh], [1.2.5.95rc1], [mosh-devel@mit.edu])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src/frontend/mosh-client.cc])
@@ -10,8 +10,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
-AC_PROG_CC
-AC_PROG_CXX
+AC_PROG_CC([cc gcc clang])
+AC_PROG_CXX([c++ g++ clang++])
 AC_PROG_RANLIB
 AC_PATH_PROG([PROTOC], [protoc], [])
 AS_IF([test x"$PROTOC" = x],
@@ -93,7 +93,7 @@ AS_IF([test x"$hardening" != x"no"], [
   # This one will likely succeed, even on platforms where it does nothing.
   check_cc_cxx_flag([-D_FORTIFY_SOURCE=2], [HARDEN_CFLAGS="$HARDEN_CFLAGS -D_FORTIFY_SOURCE=2"])
 
-  check_cc_cxx_flag([-fstack-protector-all],
+  check_link_flag([-fstack-protector-all],
    [HARDEN_CFLAGS="$HARDEN_CFLAGS -fstack-protector-all"
     check_cc_cxx_flag([-Wstack-protector], [HARDEN_CFLAGS="$HARDEN_CFLAGS -Wstack-protector"],
       [], [-fstack-protector-all])
@@ -206,7 +206,7 @@ AC_CHECK_HEADERS([utmpx.h])
 AC_CHECK_HEADERS([termio.h])
 AC_CHECK_HEADERS([sys/uio.h])
 AC_LANG_PUSH(C++)
-AC_CHECK_HEADERS([tr1/memory])
+AC_CHECK_HEADERS([memory tr1/memory])
 AC_LANG_POP(C++)
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -399,14 +399,18 @@ public:
   [AC_MSG_RESULT([no])])
 AC_LANG_POP(C++)
 
-AC_CHECK_DECLS([__builtin_bswap64, __builtin_ctz])
-
 AC_CHECK_DECL([mach_absolute_time],
   [AC_DEFINE([HAVE_MACH_ABSOLUTE_TIME], [1],
      [Define if mach_absolute_time is available.])],
   , [[#include <mach/mach_time.h>]])
 
-AC_CHECK_DECLS([be64toh, betoh64], [], [],
+
+AC_CHECK_DECLS([__builtin_ctz])
+
+AC_CHECK_DECLS([ffs], [], [],
+  [[#include <strings.h>]])
+
+AC_CHECK_DECLS([be64toh, betoh64, bswap64, __builtin_bswap64], [], [],
   [[#if defined(HAVE_ENDIAN_H)
 #include <endian.h>
 #elif defined(HAVE_SYS_ENDIAN_H)
@@ -445,6 +449,13 @@ AC_CHECK_DECL([IUTF8],
 
 # Checks for protobuf
 PKG_CHECK_MODULES([protobuf], [protobuf])
+
+# On Debian Sid 2016-03-16ish at least, "pkgconfig --libs protobuf"
+# gives us the bogus "-lprotobuf -pthread -lpthread"; remove
+# "-lpthread" which misconfigures compile, causing a segfault in
+# mosh-server.
+AS_IF([echo "$protobuf_LIBS" | grep -q -- -pthread],
+  [protobuf_LIBS="`echo $protobuf_LIBS | sed 's/-lpthread//g'`"])
 
 # Bash completion needs to ask where it goes if >= 2.0 is installed.
 AS_IF([test "$install_completion" != no],
